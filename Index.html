@@ -1,0 +1,362 @@
+import { useState, useEffect } from "react";
+
+const DEFAULT_PRODUCTS = [
+  {
+    id: 1,
+    name: "iPhone 15 Pro",
+    category: "Smartphones",
+    price: 1199,
+    stock: 8,
+    emoji: "📱",
+    description: "Titanium, puce A17 Pro, appareil photo 48MP",
+    badge: "NEW",
+  },
+  {
+    id: 2,
+    name: "AirPods Pro 2",
+    category: "Audio",
+    price: 279,
+    stock: 15,
+    emoji: "🎧",
+    description: "ANC adaptatif, audio spatial, étui MagSafe",
+    badge: "TOP",
+  },
+  {
+    id: 3,
+    name: "MacBook Air M3",
+    category: "Ordinateurs",
+    price: 1299,
+    stock: 3,
+    emoji: "💻",
+    description: "Puce M3, 8Go RAM, 256Go SSD, 15h autonomie",
+    badge: "HOT",
+  },
+  {
+    id: 4,
+    name: "Samsung S24 Ultra",
+    category: "Smartphones",
+    price: 1349,
+    stock: 5,
+    emoji: "📲",
+    description: "S Pen intégré, zoom 100x, écran 6.8\"",
+    badge: "",
+  },
+  {
+    id: 5,
+    name: "Apple Watch Ultra 2",
+    category: "Wearables",
+    price: 899,
+    stock: 0,
+    emoji: "⌚",
+    description: "GPS double fréquence, titanium, 60h autonomie",
+    badge: "SOLD OUT",
+  },
+  {
+    id: 6,
+    name: "iPad Pro M4",
+    category: "Tablettes",
+    price: 1099,
+    stock: 7,
+    emoji: "🖥️",
+    description: "Écran OLED 11\", puce M4, Face ID",
+    badge: "NEW",
+  },
+];
+
+const CATEGORIES = ["Tous", "Smartphones", "Audio", "Ordinateurs", "Tablettes", "Wearables", "Accessoires"];
+
+const BADGE_COLORS = {
+  NEW: "from-cyan-400 to-blue-500",
+  TOP: "from-amber-400 to-orange-500",
+  HOT: "from-red-400 to-pink-500",
+  "SOLD OUT": "from-gray-400 to-gray-600",
+};
+
+export default function TechStoreMiniApp() {
+  const [view, setView] = useState("shop"); // shop | cart | admin | adminEdit
+  const [products, setProducts] = useState(DEFAULT_PRODUCTS);
+  const [cart, setCart] = useState([]);
+  const [selectedCategory, setSelectedCategory] = useState("Tous");
+  const [adminPassword, setAdminPassword] = useState("");
+  const [adminAuthenticated, setAdminAuthenticated] = useState(false);
+  const [adminError, setAdminError] = useState("");
+  const [editingProduct, setEditingProduct] = useState(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [toastMsg, setToastMsg] = useState("");
+  const [nextId, setNextId] = useState(7);
+  const [adminView, setAdminView] = useState("list"); // list | edit | add
+
+  // Persist products in storage
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const res = await window.storage.get("techstore_products");
+        if (res) setProducts(JSON.parse(res.value));
+        const nid = await window.storage.get("techstore_nextid");
+        if (nid) setNextId(parseInt(nid.value));
+      } catch {}
+    };
+    load();
+  }, []);
+
+  const saveProducts = async (prods) => {
+    setProducts(prods);
+    try {
+      await window.storage.set("techstore_products", JSON.stringify(prods));
+    } catch {}
+  };
+
+  const showToast = (msg) => {
+    setToastMsg(msg);
+    setTimeout(() => setToastMsg(""), 2500);
+  };
+
+  const addToCart = (product) => {
+    if (product.stock === 0) return;
+    setCart((prev) => {
+      const existing = prev.find((i) => i.id === product.id);
+      if (existing) {
+        return prev.map((i) => i.id === product.id ? { ...i, qty: i.qty + 1 } : i);
+      }
+      return [...prev, { ...product, qty: 1 }];
+    });
+    showToast(`✅ ${product.name} ajouté au panier !`);
+  };
+
+  const removeFromCart = (id) => setCart((prev) => prev.filter((i) => i.id !== id));
+  const updateQty = (id, delta) => {
+    setCart((prev) =>
+      prev.map((i) => i.id === id ? { ...i, qty: Math.max(1, i.qty + delta) } : i)
+    );
+  };
+
+  const cartTotal = cart.reduce((s, i) => s + i.price * i.qty, 0);
+  const cartCount = cart.reduce((s, i) => s + i.qty, 0);
+
+  const filteredProducts = products.filter((p) => {
+    const matchCat = selectedCategory === "Tous" || p.category === selectedCategory;
+    const matchSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchCat && matchSearch;
+  });
+
+  // Admin Auth
+  const handleAdminLogin = () => {
+    if (adminPassword === "admin1234") {
+      setAdminAuthenticated(true);
+      setAdminError("");
+      setView("admin");
+    } else {
+      setAdminError("❌ Mot de passe incorrect");
+    }
+  };
+
+  // Admin product edit
+  const startEdit = (product) => {
+    setEditingProduct({ ...product });
+    setAdminView("edit");
+  };
+
+  const startAdd = () => {
+    setEditingProduct({
+      id: nextId,
+      name: "",
+      category: "Smartphones",
+      price: 0,
+      stock: 0,
+      emoji: "📦",
+      description: "",
+      badge: "",
+    });
+    setAdminView("add");
+  };
+
+  const saveProduct = () => {
+    if (!editingProduct.name || editingProduct.price <= 0) {
+      showToast("⚠️ Nom et prix requis !");
+      return;
+    }
+    let updated;
+    if (adminView === "add") {
+      updated = [...products, { ...editingProduct, id: nextId }];
+      const newId = nextId + 1;
+< truncated lines 182-374 >
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 20 }}>
+                  <span style={{ fontWeight: 900, fontSize: 18 }}>Total</span>
+                  <span style={{ fontWeight: 900, fontSize: 20, background: "linear-gradient(135deg,#a78bfa,#f472b6)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>{cartTotal}€</span>
+                </div>
+                <button
+                  onClick={() => { showToast("🎉 Commande envoyée ! On vous contacte."); setCart([]); setView("shop"); }}
+                  style={{ width: "100%", background: "linear-gradient(135deg,#6366f1,#ec4899)", border: "none", borderRadius: 16, padding: "15px 0", color: "#fff", fontWeight: 900, fontSize: 16, cursor: "pointer", fontFamily: "inherit", boxShadow: "0 8px 24px rgba(99,102,241,0.4)" }}
+                >
+                  Commander via Telegram 📲
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+      )}
+
+      {/* ===== ADMIN LOGIN ===== */}
+      {view === "adminLogin" && (
+        <div style={{ padding: 30, position: "relative", zIndex: 1 }}>
+          <div style={{ textAlign: "center", marginBottom: 30 }}>
+            <div style={{ fontSize: 50, marginBottom: 10 }}>🔐</div>
+            <div style={{ fontWeight: 900, fontSize: 22 }}>Panel Admin</div>
+            <div style={{ opacity: 0.5, fontSize: 13, marginTop: 6 }}>Accès réservé aux administrateurs</div>
+          </div>
+          <div style={{ background: "rgba(255,255,255,0.05)", borderRadius: 18, padding: 20, border: "1px solid rgba(255,255,255,0.1)" }}>
+            <div style={{ marginBottom: 8, fontWeight: 700, fontSize: 13 }}>Mot de passe</div>
+            <input
+              type="password"
+              value={adminPassword}
+              onChange={(e) => setAdminPassword(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleAdminLogin()}
+              placeholder="••••••••"
+              style={{ width: "100%", background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.15)", borderRadius: 12, padding: "12px 16px", color: "#fff", fontSize: 15, fontFamily: "inherit", outline: "none", boxSizing: "border-box" }}
+            />
+            {adminError && <div style={{ color: "#f87171", fontSize: 13, fontWeight: 700, marginTop: 8 }}>{adminError}</div>}
+            <button
+              onClick={handleAdminLogin}
+              style={{ width: "100%", marginTop: 16, background: "linear-gradient(135deg,#6366f1,#ec4899)", border: "none", borderRadius: 14, padding: "13px 0", color: "#fff", fontWeight: 900, fontSize: 15, cursor: "pointer", fontFamily: "inherit" }}
+            >
+              Accéder au panel
+            </button>
+            <div style={{ textAlign: "center", marginTop: 14, opacity: 0.4, fontSize: 11 }}>Mot de passe démo : admin1234</div>
+          </div>
+          <button onClick={() => setView("shop")} style={{ width: "100%", marginTop: 14, background: "none", border: "1px solid rgba(255,255,255,0.15)", borderRadius: 14, padding: "11px 0", color: "#fff", fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
+            ← Retour à la boutique
+          </button>
+        </div>
+      )}
+
+      {/* ===== ADMIN PANEL ===== */}
+      {view === "admin" && adminAuthenticated && (
+        <div style={{ padding: "16px 16px 80px", position: "relative", zIndex: 1 }}>
+          {adminView === "list" && (
+            <>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+                <div>
+                  <div style={{ fontWeight: 900, fontSize: 20 }}>⚙️ Gestion Produits</div>
+                  <div style={{ fontSize: 12, opacity: 0.5, marginTop: 2 }}>{products.length} produit(s)</div>
+                </div>
+                <button
+                  onClick={startAdd}
+                  style={{ background: "linear-gradient(135deg,#6366f1,#ec4899)", border: "none", borderRadius: 14, padding: "10px 18px", color: "#fff", fontWeight: 800, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}
+                >
+                  + Ajouter
+                </button>
+              </div>
+
+              {products.map((product) => (
+                <div key={product.id} style={{ background: "rgba(255,255,255,0.05)", borderRadius: 18, padding: "14px 16px", marginBottom: 12, display: "flex", alignItems: "center", gap: 12, border: "1px solid rgba(255,255,255,0.08)" }}>
+                  <div style={{ fontSize: 28 }}>{product.emoji}</div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontWeight: 800, fontSize: 14 }}>{product.name}</div>
+                    <div style={{ fontSize: 12, opacity: 0.5 }}>{product.category}</div>
+                    <div style={{ display: "flex", gap: 10, marginTop: 4, alignItems: "center" }}>
+                      <span style={{ fontWeight: 800, color: "#a78bfa" }}>{product.price}€</span>
+                      <span style={{ fontSize: 11, color: product.stock > 0 ? "#34d399" : "#f87171", fontWeight: 700 }}>
+                        Stock: {product.stock}
+                      </span>
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <button onClick={() => startEdit(product)} style={{ background: "rgba(99,102,241,0.2)", border: "none", borderRadius: 10, padding: "8px 12px", color: "#a78bfa", cursor: "pointer", fontSize: 14, fontWeight: 700 }}>✏️</button>
+                    <button onClick={() => deleteProduct(product.id)} style={{ background: "rgba(239,68,68,0.15)", border: "none", borderRadius: 10, padding: "8px 12px", color: "#f87171", cursor: "pointer", fontSize: 14 }}>🗑️</button>
+                  </div>
+                </div>
+              ))}
+            </>
+          )}
+
+          {(adminView === "edit" || adminView === "add") && editingProduct && (
+            <>
+              <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 24 }}>
+                <button onClick={() => setAdminView("list")} style={{ background: "rgba(255,255,255,0.08)", border: "none", borderRadius: 10, padding: "8px 14px", color: "#fff", fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>←</button>
+                <div style={{ fontWeight: 900, fontSize: 18 }}>{adminView === "add" ? "➕ Nouveau produit" : "✏️ Modifier produit"}</div>
+              </div>
+
+              {[
+                { label: "Emoji", key: "emoji", type: "text", placeholder: "📦" },
+                { label: "Nom du produit", key: "name", type: "text", placeholder: "Ex: iPhone 15 Pro" },
+                { label: "Description", key: "description", type: "text", placeholder: "Courte description..." },
+                { label: "Prix (€)", key: "price", type: "number", placeholder: "0" },
+                { label: "Stock disponible", key: "stock", type: "number", placeholder: "0" },
+                { label: "Badge (NEW, TOP, HOT, ou vide)", key: "badge", type: "text", placeholder: "Laisser vide si aucun" },
+              ].map(({ label, key, type, placeholder }) => (
+                <div key={key} style={{ marginBottom: 14 }}>
+                  <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 6, opacity: 0.8 }}>{label}</div>
+                  <input
+                    type={type}
+                    value={editingProduct[key]}
+                    onChange={(e) => setEditingProduct({ ...editingProduct, [key]: type === "number" ? Number(e.target.value) : e.target.value })}
+                    placeholder={placeholder}
+                    style={{ width: "100%", background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 12, padding: "11px 14px", color: "#fff", fontSize: 14, fontFamily: "inherit", outline: "none", boxSizing: "border-box" }}
+                  />
+                </div>
+              ))}
+
+              <div style={{ marginBottom: 20 }}>
+                <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 6, opacity: 0.8 }}>Catégorie</div>
+                <select
+                  value={editingProduct.category}
+                  onChange={(e) => setEditingProduct({ ...editingProduct, category: e.target.value })}
+                  style={{ width: "100%", background: "#1a1a2e", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 12, padding: "11px 14px", color: "#fff", fontSize: 14, fontFamily: "inherit", outline: "none" }}
+                >
+                  {CATEGORIES.filter(c => c !== "Tous").map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
+              </div>
+
+              <button
+                onClick={saveProduct}
+                style={{ width: "100%", background: "linear-gradient(135deg,#6366f1,#ec4899)", border: "none", borderRadius: 16, padding: "15px 0", color: "#fff", fontWeight: 900, fontSize: 16, cursor: "pointer", fontFamily: "inherit", boxShadow: "0 8px 24px rgba(99,102,241,0.4)", marginBottom: 12 }}
+              >
+                💾 Sauvegarder
+              </button>
+              <button
+                onClick={() => setAdminView("list")}
+                style={{ width: "100%", background: "none", border: "1px solid rgba(255,255,255,0.15)", borderRadius: 16, padding: "13px 0", color: "#fff", fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}
+              >
+                Annuler
+              </button>
+            </>
+          )}
+        </div>
+      )}
+
+      {/* Bottom Nav */}
+      {(view === "shop" || view === "cart") && (
+        <div style={{ position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 430, background: "rgba(15,15,26,0.95)", borderTop: "1px solid rgba(255,255,255,0.08)", display: "flex", backdropFilter: "blur(20px)", zIndex: 100 }}>
+          {[
+            { id: "shop", emoji: "🏪", label: "Boutique" },
+            { id: "cart", emoji: "🛒", label: `Panier${cartCount > 0 ? ` (${cartCount})` : ""}` },
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setView(tab.id)}
+              style={{
+                flex: 1,
+                background: "none",
+                border: "none",
+                padding: "14px 0",
+                color: view === tab.id ? "#a78bfa" : "rgba(255,255,255,0.4)",
+                fontWeight: view === tab.id ? 900 : 600,
+                fontSize: 12,
+                cursor: "pointer",
+                fontFamily: "inherit",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                gap: 4,
+                borderTop: view === tab.id ? "2px solid #a78bfa" : "2px solid transparent",
+              }}
+            >
+              <span style={{ fontSize: 20 }}>{tab.emoji}</span>
+              {tab.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
